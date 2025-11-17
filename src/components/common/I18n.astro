@@ -1,0 +1,65 @@
+---
+import {
+  availableLanguageCodes,
+  type AvailableLanguageCode,
+  useI18n,
+} from "../../i18n";
+
+const { p, lang: serverSideLanguageCode } = useI18n(Astro);
+
+const languageHomeUrls = availableLanguageCodes.reduce(
+  (acc, lang) => {
+    acc[lang] = p("home");
+    return acc;
+  },
+  {} as Record<AvailableLanguageCode, string>,
+);
+---
+
+<script
+  data-server-side-language={serverSideLanguageCode}
+  data-available-languages={JSON.stringify(availableLanguageCodes)}
+  data-language-home-urls={JSON.stringify(languageHomeUrls)}
+>
+  (function initI18n() {
+    const dataset = document.currentScript.dataset;
+
+    const serverSideLanguage = dataset.serverSideLanguage;
+    const availableLanguages = JSON.parse(dataset.availableLanguages ?? "[]");
+    const languageHomeUrls = JSON.parse(dataset.languageHomeUrls ?? "{}");
+
+    function getPreferredLanguage() {
+      if (navigator.languages && navigator.languages.length > 0) {
+        for (const lang of navigator.languages) {
+          const langCode = lang.substring(0, 2).toLowerCase();
+          if (availableLanguages.includes(langCode)) {
+            return langCode;
+          }
+        }
+      }
+
+      return serverSideLanguage;
+    }
+
+    function setLanguage(code) {
+      const targetUrl = languageHomeUrls[code];
+      if (!targetUrl) {
+        return;
+      }
+
+      window.location.href = targetUrl;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const preferredLanguage = getPreferredLanguage();
+      if (preferredLanguage !== serverSideLanguage) {
+        // TODO: Do what you want when the preferred language is different from the server side language.
+      }
+    });
+
+    document.addEventListener("setlanguage", (event) => {
+      const language = event.detail.language;
+      setLanguage(language);
+    });
+  })();
+</script>
